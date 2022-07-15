@@ -1,0 +1,33 @@
+.buttonRow {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+
+.root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: beige;
+}
+
+.image {
+  width: 345px;
+}
+
+.container {
+  flex-direction: column;
+  display: flex;
+}
+
+.search {
+}
+
+.searchBar {
+  display: flex;
+  flex-direction: row;
+  height: 56px;
+  justify-content: space-between;
+  margin: 12px 0;
+}
