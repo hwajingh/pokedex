@@ -5,17 +5,16 @@ import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardMedia from "@mui/material/CardMedia";
 import CardContent from "@mui/material/CardContent";
-import Collapse from "@mui/material/Collapse";
+
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
-import { red } from "@mui/material/colors";
+
 import { getTypeString } from "./helper";
 import Button from "@mui/material/Button";
 import logo from "./pokemonlogo.png";
 import { makeUpper } from "./helper";
 import pokeball from "./pokeball.jpeg";
 import TextField from "@mui/material/TextField";
-import { style } from "@mui/system";
 
 // https://reactjs.org/docs/hooks-rules.html
 
@@ -56,7 +55,7 @@ function App() {
         setPokemon(response.data);
         console.log(pokemon);
       });
-  }, [id, pokemon.name]);
+  }, [id, pokemon.name, pokemon]);
 
   return (
     <div className={styles.root}>
