@@ -21,13 +21,17 @@
   display: flex;
 }
 
-.search {
-}
-
 .searchBar {
   display: flex;
   flex-direction: row;
   height: 56px;
   justify-content: space-between;
   margin: 12px 0;
+}
+
+.footer {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  font-weight: bold;
 }
