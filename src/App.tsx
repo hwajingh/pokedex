@@ -15,19 +15,15 @@ import logo from "./pokemonlogo.png";
 import pokeball from "./pokeball.jpeg";
 import TextField from "@mui/material/TextField";
 
-// https://reactjs.org/docs/hooks-rules.html
-
 export interface PokemonType {
   name: string;
   sprites: { front_default: string };
-  // declaring type
   types: { type: { name: string } }[];
   height: number;
   weight: number;
 }
 
 function App() {
-  // const [expanded, setExpanded] = React.useState(false);
   const [pokemon, setPokemon] = React.useState<PokemonType>({
     name: "",
     sprites: { front_default: "" },
@@ -40,22 +36,14 @@ function App() {
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // declaring value
-
-  // const handleExpandClick = () => {
-  //   setExpanded(!expanded);
-  // };
 
   React.useEffect(() => {
-    // FIX: depend on `id` only. `pokemon` used to be in the deps, so every
-    // successful fetch created a new pokemon object and re-triggered the
-    // effect — an unbounded refetch loop.
+    // Depend on `id` only, so a successful fetch does not re-trigger itself.
     setError(null);
     setIsLoading(true);
     axios
       .get(`https://pokeapi.co/api/v2/pokemon/${id}`)
       .then(function (response) {
-        // handle success
         setPokemon(response.data);
       })
       .catch(function () {
@@ -66,8 +54,7 @@ function App() {
       });
   }, [id]);
 
-  // Search is a form submit, so Enter in the field works the same as
-  // tapping Search — a basic keyboard / mobile expectation.
+  // Search is a form submit, so Enter works like tapping Search.
   const handleSearch = () => {
     const query = name.trim().toLowerCase();
     if (!query) {
@@ -78,7 +65,6 @@ function App() {
     axios
       .get(`https://pokeapi.co/api/v2/pokemon/${query}`)
       .then(function (response) {
-        // handle success
         setId(response.data.id);
       })
       .catch(function () {
@@ -154,7 +140,7 @@ function App() {
               <Typography variant="body2" color="text.secondary">
                 {makeUpper(pokemon.name)} is {pokemon.height}0cm tall and
                 weighs{" "}
-                {/* FIX: PokeAPI weight is in hectograms, so divide by 10 for kg. */}
+                {/* PokeAPI weight is in hectograms; divide by 10 for kg. */}
                 {pokemon.weight / 10}kg.
               </Typography>
             </CardContent>
