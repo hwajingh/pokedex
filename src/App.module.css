@@ -1,32 +1,47 @@
 .buttonRow {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   padding-top: 12px;
 }
 
+/* min-height, not fixed height: the card (sprite + header + text) is
+   taller than many phone viewports, and a centred 100vh flex box
+   clips its top when content overflows. Top-aligned with padding
+   keeps everything reachable, on any screen size. */
 .root {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
   background: beige;
 }
 
 .image {
-  width: 345px;
+  width: 100%;
+  height: auto;
+  max-width: 345px;
 }
 
 .container {
   flex-direction: column;
   display: flex;
+  width: min(345px, 100%);
 }
 
 .searchBar {
   display: flex;
   flex-direction: row;
-  height: 56px;
-  justify-content: space-between;
+  gap: 8px;
+  align-items: stretch;
   margin: 12px 0;
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
 }
 
 .footer {

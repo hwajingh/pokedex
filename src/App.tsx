@@ -38,6 +38,7 @@ function App() {
   const [id, setId] = React.useState(1);
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   // declaring value
 
@@ -46,12 +47,11 @@ function App() {
   // };
 
   React.useEffect(() => {
-    // Update the document title using the browser API
-
     // FIX: depend on `id` only. `pokemon` used to be in the deps, so every
     // successful fetch created a new pokemon object and re-triggered the
     // effect — an unbounded refetch loop.
     setError(null);
+    setIsLoading(true);
     axios
       .get(`https://pokeapi.co/api/v2/pokemon/${id}`)
       .then(function (response) {
@@ -60,14 +60,48 @@ function App() {
       })
       .catch(function () {
         setError("Could not load that Pokémon. Please try another name or id.");
+      })
+      .finally(function () {
+        setIsLoading(false);
       });
   }, [id]);
+
+  // Search is a form submit, so Enter in the field works the same as
+  // tapping Search — a basic keyboard / mobile expectation.
+  const handleSearch = () => {
+    const query = name.trim().toLowerCase();
+    if (!query) {
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
+    axios
+      .get(`https://pokeapi.co/api/v2/pokemon/${query}`)
+      .then(function (response) {
+        // handle success
+        setId(response.data.id);
+      })
+      .catch(function () {
+        setError(
+          "Could not find that Pokémon. Please check the name and try again."
+        );
+      })
+      .finally(function () {
+        setIsLoading(false);
+      });
+  };
 
   return (
     <div className={styles.root}>
       <div className={styles.container}>
-        <img className={styles.image} src={logo} alt="" />
-        <div className={styles.searchBar}>
+        <img className={styles.image} src={logo} alt="Pokémon logo" />
+        <form
+          className={styles.searchBar}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }}
+        >
           <TextField
             className={styles.search}
             id="filled-basic"
@@ -76,66 +110,61 @@ function App() {
             onChange={(e) => setName(e.target.value)}
           />
           <Button
+            type="submit"
             variant="contained"
-            disabled={name === ""}
-            onClick={async () => {
-              // FIX: normalise the query and only setId(). The effect above
-              // then does the single fetch — previously the handler fetched
-              // AND setPokemon, then setId triggered the effect fetch again.
-              const query = name.trim().toLowerCase();
-              if (!query) {
-                return;
-              }
-              setError(null);
-              axios
-                .get(`https://pokeapi.co/api/v2/pokemon/${query}`)
-                .then(function (response) {
-                  // handle success
-                  setId(response.data.id);
-                })
-                .catch(function () {
-                  setError(
-                    "Could not find that Pokémon. Please check the name and try again."
-                  );
-                });
-            }}
+            disabled={name.trim() === "" || isLoading}
+            sx={{ minHeight: 44 }}
           >
             search
           </Button>
-        </div>
+        </form>
+        {isLoading && (
+          <Typography sx={{ marginBottom: 2 }}>Loading…</Typography>
+        )}
         {error && (
           <Typography color="error" sx={{ marginBottom: 2 }}>
             {error}
           </Typography>
         )}
-        <Card sx={{ maxWidth: 345 }}>
-          <CardHeader
-            avatar={
-              <Avatar src={pokeball} aria-label="">
-                R
-              </Avatar>
-            }
-            title={makeUpper(pokemon.name)}
-            subheader={getTypeString(pokemon.types)}
-          />
-          <CardMedia
-            component="img"
-            height="400"
-            width="400"
-            image={pokemon.sprites.front_default}
-          />
-          <CardContent>
-            <Typography variant="body2" color="text.secondary">
-              {makeUpper(pokemon.name)} is {pokemon.height}0cm tall and weighs{" "}
-              {/* FIX: PokeAPI weight is in hectograms, so divide by 10 for kg. */}
-              {pokemon.weight / 10}kg.
-            </Typography>
-          </CardContent>
-        </Card>
+        {pokemon.name ? (
+          <Card sx={{ maxWidth: 345, width: "100%" }}>
+            <CardHeader
+              avatar={
+                <Avatar src={pokeball} aria-label="Pokéball">
+                  R
+                </Avatar>
+              }
+              title={makeUpper(pokemon.name)}
+              subheader={getTypeString(pokemon.types)}
+            />
+            <CardMedia
+              component="img"
+              image={pokemon.sprites.front_default}
+              alt={makeUpper(pokemon.name)}
+              sx={{
+                display: "block",
+                width: "100%",
+                height: "auto",
+                maxHeight: 320,
+                objectFit: "contain",
+                backgroundColor: "#f5f5f5",
+              }}
+            />
+            <CardContent>
+              <Typography variant="body2" color="text.secondary">
+                {makeUpper(pokemon.name)} is {pokemon.height}0cm tall and
+                weighs{" "}
+                {/* FIX: PokeAPI weight is in hectograms, so divide by 10 for kg. */}
+                {pokemon.weight / 10}kg.
+              </Typography>
+            </CardContent>
+          </Card>
+        ) : null}
         <div className={styles.buttonRow}>
           <Button
             variant="contained"
-            disabled={id === 1}
+            disabled={id === 1 || isLoading}
+            sx={{ minHeight: 44 }}
             onClick={() => {
               if (id > 1) {
                 setId(id - 1);
@@ -147,6 +176,8 @@ function App() {
 
           <Button
             variant="contained"
+            disabled={isLoading}
+            sx={{ minHeight: 44 }}
             onClick={() => {
               setId(id + 1);
             }}
