@@ -8,11 +8,12 @@
 /* min-height, not fixed height: the card (sprite + header + text) is
    taller than many phone viewports, and a centred 100vh flex box
    clips its top when content overflows. Top-aligned with padding
-   keeps everything reachable, on any screen size. */
+   keeps everything reachable, on any screen size. Column layout so
+   the footer stacks below the content instead of beside it. */
 .root {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   min-height: 100vh;
   padding: 16px;
   box-sizing: border-box;
@@ -81,9 +82,12 @@
   color: #666;
 }
 
+/* In normal flow at the bottom of the page, never fixed to the
+   viewport: margin-top auto pushes it to the bottom when the content
+   is shorter than the screen, and it scrolls away with the content
+   when the page is taller. */
 .footer {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
+  margin-top: auto;
+  padding-top: 24px;
   font-weight: bold;
 }
