@@ -40,8 +40,45 @@
 }
 
 .search {
+  width: 100%;
+}
+
+/* The dropdown anchors to the text field, not the whole search row. */
+.searchWrap {
+  position: relative;
   flex: 1;
   min-width: 0;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.suggestions li {
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.suggestions li.activeOption {
+  background: #e8e8e8;
+}
+
+.suggestions li.noMatch {
+  cursor: default;
+  color: #666;
 }
 
 .footer {

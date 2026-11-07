@@ -9,7 +9,7 @@ import CardContent from "@mui/material/CardContent";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 
-import { getTypeString, makeUpper } from "./helper";
+import { getTypeString, makeUpper, filterPokemonNames } from "./helper";
 import Button from "@mui/material/Button";
 import logo from "./pokemonlogo.png";
 import pokeball from "./pokeball.jpeg";
@@ -23,6 +23,8 @@ export interface PokemonType {
   weight: number;
 }
 
+const MAX_SUGGESTIONS = 10;
+
 function App() {
   const [pokemon, setPokemon] = React.useState<PokemonType>({
     name: "",
@@ -35,7 +37,28 @@ function App() {
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [allNames, setAllNames] = React.useState<string[]>([]);
+  const [listLoaded, setListLoaded] = React.useState(false);
+  const [listFailed, setListFailed] = React.useState(false);
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState(-1);
 
+  // The full name list, fetched once for the search dropdown.
+  React.useEffect(() => {
+    axios
+      .get("https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0")
+      .then(function (response) {
+        setAllNames(
+          response.data.results.map(function (entry: { name: string }) {
+            return entry.name;
+          })
+        );
+        setListLoaded(true);
+      })
+      .catch(function () {
+        setListFailed(true);
+      });
+  }, []);
 
   React.useEffect(() => {
     // Depend on `id` only, so a successful fetch does not re-trigger itself.
@@ -54,27 +77,82 @@ function App() {
       });
   }, [id]);
 
-  // Search is a form submit, so Enter works like tapping Search.
-  const handleSearch = () => {
-    const query = name.trim().toLowerCase();
-    if (!query) {
-      return;
-    }
+  const query = name.trim().toLowerCase();
+  const suggestions = listLoaded
+    ? filterPokemonNames(allNames, query, MAX_SUGGESTIONS)
+    : [];
+  const dropdownOpen = showSuggestions && query !== "" && !listFailed;
+
+  const loadByName = (selected: string) => {
     setError(null);
     setIsLoading(true);
     axios
-      .get(`https://pokeapi.co/api/v2/pokemon/${query}`)
+      .get(`https://pokeapi.co/api/v2/pokemon/${selected}`)
       .then(function (response) {
         setId(response.data.id);
       })
       .catch(function () {
-        setError(
-          "Could not find that Pokémon. Please check the name and try again."
-        );
+        setError("Could not load that Pokémon. Please try again.");
       })
       .finally(function () {
         setIsLoading(false);
       });
+  };
+
+  const selectSuggestion = (selected: string) => {
+    setName(selected);
+    setShowSuggestions(false);
+    setActiveIndex(-1);
+    loadByName(selected);
+  };
+
+  // Search is a form submit, so Enter works like tapping Search.
+  // With the name list loaded, a miss is answered by the dropdown's
+  // "No Pokémon match" row, not an error banner. The direct search
+  // below only runs as a fallback when the list itself failed to load.
+  const handleSearch = () => {
+    if (!query) {
+      return;
+    }
+    if (listLoaded) {
+      if (allNames.includes(query)) {
+        loadByName(query);
+      }
+      return;
+    }
+    if (listFailed) {
+      loadByName(query);
+      return;
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (suggestions.length === 0) {
+        return;
+      }
+      setShowSuggestions(true);
+      setActiveIndex((index) => (index + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (suggestions.length === 0) {
+        return;
+      }
+      setShowSuggestions(true);
+      setActiveIndex((index) =>
+        index <= 0 ? suggestions.length - 1 : index - 1
+      );
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveIndex(-1);
+    } else if (e.key === "Enter") {
+      // An highlighted suggestion wins over the form submit.
+      if (activeIndex >= 0 && suggestions[activeIndex]) {
+        e.preventDefault();
+        selectSuggestion(suggestions[activeIndex]);
+      }
+    }
   };
 
   return (
@@ -88,13 +166,71 @@ function App() {
             handleSearch();
           }}
         >
-          <TextField
-            className={styles.search}
-            id="filled-basic"
-            label="Search pokemon name"
-            variant="filled"
-            onChange={(e) => setName(e.target.value)}
-          />
+          <div className={styles.searchWrap}>
+            <TextField
+              className={styles.search}
+              id="filled-basic"
+              label="Pokemon Name"
+              variant="filled"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setShowSuggestions(true);
+                setActiveIndex(-1);
+              }}
+              onFocus={() => {
+                if (name.trim() !== "") {
+                  setShowSuggestions(true);
+                }
+              }}
+              onBlur={() => setShowSuggestions(false)}
+              onKeyDown={handleInputKeyDown}
+              inputProps={{
+                role: "combobox",
+                "aria-expanded": dropdownOpen,
+                "aria-controls": "pokemon-suggestions",
+                "aria-activedescendant":
+                  activeIndex >= 0
+                    ? `pokemon-suggestion-${activeIndex}`
+                    : undefined,
+                autoComplete: "off",
+              }}
+            />
+            {dropdownOpen && (
+              <ul
+                id="pokemon-suggestions"
+                role="listbox"
+                className={styles.suggestions}
+              >
+                {!listLoaded && (
+                  <li className={styles.noMatch}>Loading Pokémon list…</li>
+                )}
+                {listLoaded && suggestions.length === 0 && (
+                  <li className={styles.noMatch}>
+                    {`No Pokémon match "${query}".`}
+                  </li>
+                )}
+                {suggestions.map((suggestion, index) => (
+                  <li
+                    key={suggestion}
+                    id={`pokemon-suggestion-${index}`}
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    className={
+                      index === activeIndex ? styles.activeOption : undefined
+                    }
+                    onMouseDown={(e) => {
+                      // Select before the input blurs and closes the list.
+                      e.preventDefault();
+                      selectSuggestion(suggestion);
+                    }}
+                  >
+                    {makeUpper(suggestion)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <Button
             type="submit"
             variant="contained"
@@ -130,8 +266,9 @@ function App() {
               sx={{
                 display: "block",
                 width: "100%",
-                height: "auto",
-                maxHeight: 320,
+                // Fixed height: every sprite gets the same viewport, so the
+                // card never reshapes when the next image is a different size.
+                height: 320,
                 objectFit: "contain",
                 backgroundColor: "#f5f5f5",
               }}
