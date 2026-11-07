@@ -9,7 +9,7 @@ import CardContent from "@mui/material/CardContent";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 
-import { getTypeString, makeUpper, filterPokemonNames } from "./helper";
+import { getTypeString, makeUpper, filterPokemonNames, closestPokemonName } from "./helper";
 import Button from "@mui/material/Button";
 import logo from "./pokemonlogo.png";
 import pokeball from "./pokeball.jpeg";
@@ -81,6 +81,18 @@ function App() {
   const suggestions = listLoaded
     ? filterPokemonNames(allNames, query, MAX_SUGGESTIONS)
     : [];
+  // No prefix match: offer the closest real name instead of a dead end.
+  const correction =
+    listLoaded && suggestions.length === 0
+      ? closestPokemonName(allNames, query)
+      : null;
+  const dropdownItems = suggestions.map((suggestion) => ({
+    name: suggestion,
+    didYouMean: false,
+  }));
+  if (correction) {
+    dropdownItems.push({ name: correction, didYouMean: true });
+  }
   const dropdownOpen = showSuggestions && query !== "" && !listFailed;
 
   const loadByName = (selected: string) => {
@@ -107,16 +119,22 @@ function App() {
   };
 
   // Search is a form submit, so Enter works like tapping Search.
-  // With the name list loaded, a miss is answered by the dropdown's
-  // "No Pokémon match" row, not an error banner. The direct search
-  // below only runs as a fallback when the list itself failed to load.
+  // With the name list loaded, Enter always completes the search:
+  // an exact name loads directly, otherwise the first dropdown row
+  // wins — the top prefix match, or the "Did you mean" correction.
+  // Only a query with no dropdown row at all does nothing, and the
+  // dropdown's "No Pokémon match" row is the feedback, not an error
+  // banner. The direct search below only runs as a fallback when the
+  // list itself failed to load.
   const handleSearch = () => {
     if (!query) {
       return;
     }
     if (listLoaded) {
       if (allNames.includes(query)) {
-        loadByName(query);
+        selectSuggestion(query);
+      } else if (dropdownItems.length > 0) {
+        selectSuggestion(dropdownItems[0].name);
       }
       return;
     }
@@ -129,28 +147,28 @@ function App() {
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (suggestions.length === 0) {
+      if (dropdownItems.length === 0) {
         return;
       }
       setShowSuggestions(true);
-      setActiveIndex((index) => (index + 1) % suggestions.length);
+      setActiveIndex((index) => (index + 1) % dropdownItems.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (suggestions.length === 0) {
+      if (dropdownItems.length === 0) {
         return;
       }
       setShowSuggestions(true);
       setActiveIndex((index) =>
-        index <= 0 ? suggestions.length - 1 : index - 1
+        index <= 0 ? dropdownItems.length - 1 : index - 1
       );
     } else if (e.key === "Escape") {
       setShowSuggestions(false);
       setActiveIndex(-1);
     } else if (e.key === "Enter") {
       // An highlighted suggestion wins over the form submit.
-      if (activeIndex >= 0 && suggestions[activeIndex]) {
+      if (activeIndex >= 0 && dropdownItems[activeIndex]) {
         e.preventDefault();
-        selectSuggestion(suggestions[activeIndex]);
+        selectSuggestion(dropdownItems[activeIndex].name);
       }
     }
   };
@@ -205,14 +223,14 @@ function App() {
                 {!listLoaded && (
                   <li className={styles.noMatch}>Loading Pokémon list…</li>
                 )}
-                {listLoaded && suggestions.length === 0 && (
+                {listLoaded && dropdownItems.length === 0 && (
                   <li className={styles.noMatch}>
                     {`No Pokémon match "${query}".`}
                   </li>
                 )}
-                {suggestions.map((suggestion, index) => (
+                {dropdownItems.map((item, index) => (
                   <li
-                    key={suggestion}
+                    key={item.name}
                     id={`pokemon-suggestion-${index}`}
                     role="option"
                     aria-selected={index === activeIndex}
@@ -222,10 +240,14 @@ function App() {
                     onMouseDown={(e) => {
                       // Select before the input blurs and closes the list.
                       e.preventDefault();
-                      selectSuggestion(suggestion);
+                      selectSuggestion(item.name);
                     }}
                   >
-                    {makeUpper(suggestion)}
+                    {item.didYouMean ? (
+                      `Did you mean "${makeUpper(item.name)}"?`
+                    ) : (
+                      makeUpper(item.name)
+                    )}
                   </li>
                 ))}
               </ul>
